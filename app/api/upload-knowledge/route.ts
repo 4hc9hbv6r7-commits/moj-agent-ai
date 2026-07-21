@@ -1,8 +1,25 @@
 import { splitIntoChunks } from "../../../lib/chunking";
 import { embedText } from "../../../lib/embeddings";
-import { supabase } from "../../../lib/supabase";
+import { createScopedClient } from "../../../lib/supabase";
 
 export async function POST(req: Request) {
+  const authHeader = req.headers.get("authorization");
+  const accessToken = authHeader?.startsWith("Bearer ") ? authHeader.slice("Bearer ".length) : null;
+
+  if (!accessToken) {
+    return new Response(JSON.stringify({ error: "Missing Authorization header" }), { status: 401 });
+  }
+
+  const supabase = createScopedClient(accessToken);
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return new Response(JSON.stringify({ error: "Invalid or expired session" }), { status: 401 });
+  }
+
   const { title, content } = (await req.json()) as { title?: string; content?: string };
 
   if (!title || typeof title !== "string" || !title.trim()) {
@@ -37,6 +54,7 @@ export async function POST(req: Request) {
             content: chunks[i],
             embedding,
             metadata: { source: title, chunk_index: i, total_chunks: chunks.length },
+            user_id: user.id,
           });
 
           if (error) {

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useAuth } from "../../lib/AuthProvider";
 import { supabase } from "../../lib/supabase";
 
 interface ConversationSummary {
@@ -41,13 +42,17 @@ function truncate(text: string, max: number) {
 }
 
 export default function HistoryPage() {
+  const { user } = useAuth();
   const [conversations, setConversations] = useState<ConversationSummary[] | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   async function loadConversations() {
+    if (!user) return;
+
     const { data: convos } = await supabase
       .from("conversations")
       .select("id, title, updated_at")
+      .eq("user_id", user.id)
       .order("updated_at", { ascending: false });
 
     if (!convos || convos.length === 0) {
@@ -83,7 +88,7 @@ export default function HistoryPage() {
 
   useEffect(() => {
     loadConversations();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (!toast) return;
@@ -96,7 +101,7 @@ export default function HistoryPage() {
     if (!confirmed) return;
 
     await supabase.from("messages").delete().eq("conversation_id", id);
-    await supabase.from("conversations").delete().eq("id", id);
+    await supabase.from("conversations").delete().eq("id", id).eq("user_id", user?.id ?? "");
 
     setConversations((current) => (current ? current.filter((c) => c.id !== id) : current));
     setToast("Rozmowa usunięta");

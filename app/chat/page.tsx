@@ -4,7 +4,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { getOrCreateUserId } from "../../lib/user";
+import { useAuth } from "../../lib/AuthProvider";
 
 type ChatModel = "flash" | "pro";
 
@@ -32,28 +32,32 @@ function truncateTitle(text: string) {
 }
 
 export default function ChatPage() {
+  const { user, session } = useAuth();
   const [input, setInput] = useState("");
   const [model, setModel] = useState<ChatModel>("flash");
   const [responseModel, setResponseModel] = useState<ChatModel | null>(null);
   const [messageModels, setMessageModels] = useState<Record<string, ChatModel>>({});
   const [copied, setCopied] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
   const conversationIdRef = useRef<string | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
+  const accessToken = session?.access_token;
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
-        body: { model, userId },
+        body: { model },
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
       }),
-    [model, userId],
+    [model, accessToken],
   );
 
   async function persistUserMessage(text: string) {
+    if (!user) return;
+
     if (!conversationIdRef.current) {
       const { data } = await supabase
         .from("conversations")
-        .insert({ title: truncateTitle(text) })
+        .insert({ title: truncateTitle(text), user_id: user.id })
         .select("id")
         .single();
 
@@ -103,30 +107,34 @@ export default function ChatPage() {
   });
 
   useEffect(() => {
-    async function ensureUserProfile() {
-      const id = getOrCreateUserId();
+    if (!user) return;
 
+    async function ensureUserProfile() {
       const { data: profile } = await supabase
         .from("user_profiles")
         .select("id")
-        .eq("id", id)
+        .eq("id", user!.id)
         .maybeSingle();
 
       if (!profile) {
-        await supabase.from("user_profiles").insert({ id, name: null });
+        await supabase.from("user_profiles").insert({ id: user!.id, name: null });
       }
-
-      setUserId(id);
     }
 
     async function loadConversation() {
       const requestedId = new URLSearchParams(window.location.search).get("conversationId");
 
       const { data: conversation } = requestedId
-        ? await supabase.from("conversations").select("id").eq("id", requestedId).maybeSingle()
+        ? await supabase
+            .from("conversations")
+            .select("id")
+            .eq("id", requestedId)
+            .eq("user_id", user!.id)
+            .maybeSingle()
         : await supabase
             .from("conversations")
             .select("id")
+            .eq("user_id", user!.id)
             .order("updated_at", { ascending: false })
             .limit(1)
             .maybeSingle();
@@ -156,7 +164,7 @@ export default function ChatPage() {
 
     ensureUserProfile();
     loadConversation();
-  }, [setMessages]);
+  }, [user, setMessages]);
 
   const isLoading = status === "submitted" || status === "streaming";
   const conversationText = messages

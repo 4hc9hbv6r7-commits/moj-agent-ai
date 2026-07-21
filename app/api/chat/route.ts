@@ -9,7 +9,8 @@ import {
   type UIMessage,
 } from "ai";
 import { z } from "zod";
-import { supabase } from "../../../lib/supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createScopedClient } from "../../../lib/supabase";
 
 type ChatModel = "flash";
 
@@ -181,21 +182,14 @@ const generateImageTool = {
   },
 };
 
-function createSaveUserNameTool(userId: string | undefined) {
+function createSaveUserNameTool(db: SupabaseClient, userId: string) {
   return {
     description: "Zapisuje imię użytkownika w jego profilu. Wywołaj gdy użytkownik poda swoje imię.",
     inputSchema: z.object({
       name: z.string().min(1, "Podaj imię"),
     }),
     execute: async ({ name }: { name: string }): Promise<string> => {
-      if (!userId) {
-        return JSON.stringify({ error: "Brak identyfikatora użytkownika" });
-      }
-
-      const { error } = await supabase
-        .from("user_profiles")
-        .update({ name })
-        .eq("id", userId);
+      const { error } = await db.from("user_profiles").update({ name }).eq("id", userId);
 
       if (error) {
         return JSON.stringify({ error: error.message });
@@ -206,7 +200,7 @@ function createSaveUserNameTool(userId: string | undefined) {
   };
 }
 
-function createSaveUserPreferenceTool(userId: string | undefined) {
+function createSaveUserPreferenceTool(db: SupabaseClient, userId: string) {
   return {
     description:
       "Zapisuje preferencję użytkownika (np. ulubione jedzenie, miasto) w jego profilu. Wywołaj gdy użytkownik wspomni o swoich upodobaniach.",
@@ -215,11 +209,7 @@ function createSaveUserPreferenceTool(userId: string | undefined) {
       value: z.string().min(1).describe("Wartość preferencji, np. 'pizza', 'Kraków'"),
     }),
     execute: async ({ key, value }: { key: string; value: string }): Promise<string> => {
-      if (!userId) {
-        return JSON.stringify({ error: "Brak identyfikatora użytkownika" });
-      }
-
-      const { data: profile, error: fetchError } = await supabase
+      const { data: profile, error: fetchError } = await db
         .from("user_profiles")
         .select("preferences")
         .eq("id", userId)
@@ -231,7 +221,7 @@ function createSaveUserPreferenceTool(userId: string | undefined) {
 
       const preferences = { ...(profile?.preferences ?? {}), [key]: value };
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await db
         .from("user_profiles")
         .update({ preferences })
         .eq("id", userId);
@@ -271,29 +261,40 @@ function prepareMessages(messages: UIMessage[], imageBase64?: string): any[] {
 
 export async function POST(req: Request) {
   try {
+    const authHeader = req.headers.get("authorization");
+    const accessToken = authHeader?.startsWith("Bearer ") ? authHeader.slice("Bearer ".length) : null;
+
+    if (!accessToken) {
+      return new Response(JSON.stringify({ error: "Missing Authorization header" }), { status: 401 });
+    }
+
+    const db = createScopedClient(accessToken);
+    const {
+      data: { user },
+      error: authError,
+    } = await db.auth.getUser();
+
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Invalid or expired session" }), { status: 401 });
+    }
+
     const body = await req.json();
-    const { messages, model = "flash", image, userId } = body;
+    const { messages, model = "flash", image } = body;
     const selectedModel = isChatModel(model) ? model : "flash";
 
     if (!messages || !Array.isArray(messages)) {
       return new Response(JSON.stringify({ error: "Missing or invalid messages" }), { status: 400 });
     }
 
-    let personalizationPrompt = "";
-    if (typeof userId === "string" && userId) {
-      const { data: profile } = await supabase
-        .from("user_profiles")
-        .select("name")
-        .eq("id", userId)
-        .maybeSingle();
+    const { data: profile } = await db
+      .from("user_profiles")
+      .select("name")
+      .eq("id", user.id)
+      .maybeSingle();
 
-      if (profile?.name) {
-        personalizationPrompt = `\n\nUżytkownik ma na imię ${profile.name}. Zwracaj się do niego po imieniu. Bądź ciepły i personalny — to Twój stały użytkownik.`;
-      } else {
-        personalizationPrompt =
-          "\n\nTo nowy użytkownik. Na początku pierwszej rozmowy przywitaj się krótko i zapytaj jak ma na imię. Gdy poda imię — użyj narzędzia saveUserName żeby je zapamiętać. Gdy wspomni o swoich preferencjach (jedzenie, miasto, zainteresowania) — zapisz je narzędziem saveUserPreference.";
-      }
-    }
+    const personalizationPrompt = profile?.name
+      ? `\n\nUżytkownik ma na imię ${profile.name}. Zwracaj się do niego po imieniu. Bądź ciepły i personalny — to Twój stały użytkownik.`
+      : "\n\nTo nowy użytkownik. Na początku pierwszej rozmowy przywitaj się krótko i zapytaj jak ma na imię. Gdy poda imię — użyj narzędzia saveUserName żeby je zapamiętać. Gdy wspomni o swoich preferencjach (jedzenie, miasto, zainteresowania) — zapisz je narzędziem saveUserPreference.";
 
     const result = streamText({
       model: google(modelMap[selectedModel]),
@@ -302,8 +303,8 @@ export async function POST(req: Request) {
       tools: {
         readWebPage: readWebPageTool,
         generateImage: generateImageTool,
-        saveUserName: createSaveUserNameTool(userId),
-        saveUserPreference: createSaveUserPreferenceTool(userId),
+        saveUserName: createSaveUserNameTool(db, user.id),
+        saveUserPreference: createSaveUserPreferenceTool(db, user.id),
       },
       stopWhen: isStepCount(3),
     });

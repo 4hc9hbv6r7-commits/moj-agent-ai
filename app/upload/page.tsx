@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { useAuth } from "../../lib/AuthProvider";
 import { supabase } from "../../lib/supabase";
 
 interface DocumentSummary {
@@ -25,6 +26,7 @@ const placeholderExamples = [
 ];
 
 export default function UploadPage() {
+  const { session } = useAuth();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -82,7 +84,10 @@ export default function UploadPage() {
     try {
       const res = await fetch("/api/upload-knowledge", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({ title: title.trim(), content }),
       });
 

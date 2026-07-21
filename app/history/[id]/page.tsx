@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
+import { useAuth } from "../../../lib/AuthProvider";
 import { supabase } from "../../../lib/supabase";
 
 interface ConversationMessage {
@@ -19,16 +20,20 @@ interface ConversationDetail {
 
 export default function HistoryConversationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const { user } = useAuth();
   const [conversation, setConversation] = useState<ConversationDetail | null>(null);
   const [messages, setMessages] = useState<ConversationMessage[] | null>(null);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
+
     async function load() {
       const { data: convo } = await supabase
         .from("conversations")
         .select("id, title, updated_at")
         .eq("id", id)
+        .eq("user_id", user!.id)
         .maybeSingle();
 
       if (!convo) {
@@ -48,7 +53,7 @@ export default function HistoryConversationPage({ params }: { params: Promise<{ 
     }
 
     load();
-  }, [id]);
+  }, [id, user]);
 
   if (notFound) {
     return (

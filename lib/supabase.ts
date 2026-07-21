@@ -5,6 +5,16 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+/**
+ * For API routes: builds a Supabase client scoped to the caller's bearer token,
+ * so RLS policies (auth.uid()) apply and .auth.getUser() returns the real caller.
+ */
+export function createScopedClient(accessToken: string) {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+  });
+}
+
 export interface Conversation {
   id: string;
   created_at: string;
