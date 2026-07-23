@@ -33,6 +33,7 @@ export default function RootLayout({
             <Link href="/format">📐 Formater</Link>
             <Link href="/upload">📚 Baza wiedzy</Link>
             <Link href="/knowledge">🔎 Przeglądaj bazę</Link>
+            <Link href="/email-triage">📧 E-mail Triage</Link>
             <NavAuthControls />
           </nav>
           {children}

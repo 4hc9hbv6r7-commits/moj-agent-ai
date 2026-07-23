@@ -1132,4 +1132,63 @@ input {
   text-decoration: underline;
 }
 
+/* L8 W1 - Email Triage */
+.email-card {
+  padding: 14px 16px;
+  border-radius: 10px;
+  margin: 0 0 14px;
+  background: #141414;
+  border: 1px solid #333;
+  border-left: 5px solid #555;
+}
+
+.email-card.priority-high {
+  background: #2a1414;
+  border-color: #ff6b6b;
+  border-left-color: #ff6b6b;
+}
+
+.email-card.priority-medium {
+  background: #2a2414;
+  border-color: #e0b03e;
+  border-left-color: #e0b03e;
+}
+
+.email-card.priority-low {
+  background: #142a1a;
+  border-color: #4ade80;
+  border-left-color: #4ade80;
+}
+
+.email-summary {
+  padding: 14px 16px;
+  margin: 0 0 14px;
+  color: #d7d7d7;
+}
+
+.copy-draft-button {
+  margin-top: 8px;
+  border: 1px solid #333;
+  border-radius: 8px;
+  background: #1a1a2a;
+  color: #c8c8d8;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.copy-draft-button:hover {
+  border-color: #555;
+  background: #222233;
+}
+
+.email-composer {
+  grid-template-columns: 1fr;
+}
+
+.email-composer .upload-textarea {
+  min-height: 200px;
+}
+
 
