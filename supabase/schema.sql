@@ -13,6 +13,7 @@ drop table if exists messages cascade;
 drop table if exists conversations cascade;
 drop table if exists documents cascade;
 drop table if exists user_profiles cascade;
+drop table if exists reports cascade;
 
 -- 1. Tabele
 
@@ -49,12 +50,21 @@ create table documents (
   user_id uuid references auth.users(id) on delete cascade
 );
 
+create table reports (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz default now(),
+  topic text not null,
+  content text not null,
+  user_id uuid not null references auth.users(id) on delete cascade
+);
+
 -- 2. Row Level Security — każdy user widzi/edytuje TYLKO swoje wiersze
 
 alter table conversations enable row level security;
 alter table messages enable row level security;
 alter table documents enable row level security;
 alter table user_profiles enable row level security;
+alter table reports enable row level security;
 
 create policy "conversations_owner" on conversations
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -72,6 +82,9 @@ create policy "documents_owner" on documents
 
 create policy "user_profiles_owner" on user_profiles
   for all using (auth.uid() = id) with check (auth.uid() = id);
+
+create policy "reports_owner" on reports
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- 3. match_documents (RAG) — wyszukiwanie semantyczne tylko we własnych dokumentach
 
