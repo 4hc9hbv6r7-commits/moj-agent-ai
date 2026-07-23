@@ -291,13 +291,19 @@ export async function POST(req: Request) {
 
     const { data: profile } = await db
       .from("user_profiles")
-      .select("name")
+      .select("name, preferences")
       .eq("id", user.id)
       .maybeSingle();
 
+    const preferenceEntries = Object.entries(profile?.preferences ?? {});
+    const preferencesPrompt =
+      preferenceEntries.length > 0
+        ? `\n\nZnane preferencje użytkownika:\n${preferenceEntries.map(([key, value]) => `- ${key}: ${value}`).join("\n")}\nUwzględniaj je w rozmowie, gdy to naturalne.`
+        : "";
+
     const personalizationPrompt = profile?.name
-      ? `\n\nUżytkownik ma na imię ${profile.name}. Zwracaj się do niego po imieniu. Bądź ciepły i personalny — to Twój stały użytkownik.`
-      : "\n\nTo nowy użytkownik. Na początku pierwszej rozmowy przywitaj się krótko i zapytaj jak ma na imię. Gdy poda imię — użyj narzędzia saveUserName żeby je zapamiętać. Gdy wspomni o swoich preferencjach (jedzenie, miasto, zainteresowania) — zapisz je narzędziem saveUserPreference.";
+      ? `\n\nUżytkownik ma na imię ${profile.name}. Zwracaj się do niego po imieniu. Bądź ciepły i personalny — to Twój stały użytkownik.${preferencesPrompt}`
+      : `\n\nTo nowy użytkownik. Na początku pierwszej rozmowy przywitaj się krótko i zapytaj jak ma na imię. Gdy poda imię — użyj narzędzia saveUserName żeby je zapamiętać. Gdy wspomni o swoich preferencjach (jedzenie, miasto, zainteresowania) — zapisz je narzędziem saveUserPreference.${preferencesPrompt}`;
 
     const result = streamText({
       model: google(modelMap[selectedModel]),
