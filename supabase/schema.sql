@@ -14,6 +14,7 @@ drop table if exists conversations cascade;
 drop table if exists documents cascade;
 drop table if exists user_profiles cascade;
 drop table if exists reports cascade;
+drop table if exists consultations cascade;
 
 -- 1. Tabele
 
@@ -58,6 +59,16 @@ create table reports (
   user_id uuid not null references auth.users(id) on delete cascade
 );
 
+create table consultations (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz default now(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  email text not null,
+  scheduled_at timestamptz not null unique,
+  message text
+);
+
 -- 2. Row Level Security — każdy user widzi/edytuje TYLKO swoje wiersze
 
 alter table conversations enable row level security;
@@ -65,6 +76,7 @@ alter table messages enable row level security;
 alter table documents enable row level security;
 alter table user_profiles enable row level security;
 alter table reports enable row level security;
+alter table consultations enable row level security;
 
 create policy "conversations_owner" on conversations
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -85,6 +97,14 @@ create policy "user_profiles_owner" on user_profiles
 
 create policy "reports_owner" on reports
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Every logged-in user can SEE all booked slots (needed to check availability),
+-- but can only create bookings under their own user_id.
+create policy "consultations_read_all" on consultations
+  for select using (auth.uid() is not null);
+
+create policy "consultations_insert_own" on consultations
+  for insert with check (auth.uid() = user_id);
 
 -- 3. match_documents (RAG) — wyszukiwanie semantyczne tylko we własnych dokumentach
 

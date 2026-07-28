@@ -36,6 +36,7 @@ export default function RootLayout({
             <Link href="/email-triage">📧 E-mail Triage</Link>
             <Link href="/report">📊 Raporty</Link>
             <Link href="/competitor">🏢 Konkurencja</Link>
+            <Link href="/consultation">📅 Konsultacja</Link>
             <NavAuthControls />
           </nav>
           {children}

@@ -1236,4 +1236,115 @@ input {
   }
 }
 
+/* L8 W4 - Consultation Booking */
+.consultation-date-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  color: #b8b8c8;
+  font-weight: 600;
+}
+
+.consultation-date-picker input {
+  min-height: 40px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  background: #121212;
+  color: #ededed;
+  padding: 0 10px;
+}
+
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.slot-button {
+  min-height: 42px;
+  border: 1px solid #333;
+  border-radius: 8px;
+  background: #1a1a2a;
+  color: #c8c8d8;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.slot-button:hover:not(:disabled) {
+  border-color: #555;
+  background: #222233;
+}
+
+.slot-button.selected {
+  border-color: #9bd6ff;
+  background: #12304a;
+  color: #dff3ff;
+}
+
+.slot-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.consultation-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #262626;
+  border-radius: 10px;
+  background: #141414;
+}
+
+.consultation-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.86rem;
+  color: #b8b8c8;
+  font-weight: 600;
+}
+
+.consultation-form input {
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid #333;
+  background: #121212;
+  color: #ededed;
+  padding: 0 12px;
+  font: inherit;
+}
+
+.consultation-message {
+  min-height: 80px;
+}
+
+.consultation-form button {
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid #3f3f50;
+  background: #2a2a3a;
+  color: #ededed;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.consultation-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.consultation-confirmation {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid #4ade80;
+  border-radius: 10px;
+  background: #142a1a;
+  color: #9bf6b4;
+}
+
 
