@@ -26,7 +26,9 @@ export default function ConsultationPage() {
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [confirmed, setConfirmed] = useState<{ date: string; time: string; emailSent: boolean } | null>(null);
+  const [confirmed, setConfirmed] = useState<{ date: string; time: string; emailSent: boolean; emailError?: string } | null>(
+    null,
+  );
 
   useEffect(() => {
     if (session?.user?.email) {
@@ -101,7 +103,12 @@ export default function ConsultationPage() {
         throw new Error(responseBody.error ?? "Nie udało się złożyć rezerwacji");
       }
 
-      setConfirmed({ date, time: selectedTime, emailSent: Boolean(responseBody.emailSent) });
+      setConfirmed({
+        date,
+        time: selectedTime,
+        emailSent: Boolean(responseBody.emailSent),
+        emailError: responseBody.emailError,
+      });
       setSlots((current) => current.map((slot) => (slot.time === selectedTime ? { ...slot, available: false } : slot)));
       setSelectedTime(null);
       setMessage("");
@@ -196,7 +203,8 @@ export default function ConsultationPage() {
               </p>
               {!confirmed.emailSent && (
                 <p className="error-message">
-                  ⚠️ Rezerwacja zapisana, ale powiadomienie mailowe nie zostało wysłane — sprawdź konfigurację Resend.
+                  ⚠️ Rezerwacja zapisana, ale powiadomienie mailowe nie zostało wysłane
+                  {confirmed.emailError ? `: ${confirmed.emailError}` : " — sprawdź konfigurację Resend."}
                 </p>
               )}
             </div>

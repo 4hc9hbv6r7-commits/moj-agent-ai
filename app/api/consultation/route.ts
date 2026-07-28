@@ -13,8 +13,9 @@ async function sendOwnerNotification(params: {
   const fromEmail = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
 
   if (!apiKey || !ownerEmail) {
-    console.error("Consultation booked but email not sent: RESEND_API_KEY or CONSULTATION_OWNER_EMAIL missing");
-    return false;
+    const reason = "RESEND_API_KEY lub CONSULTATION_OWNER_EMAIL nie jest ustawione na serwerze";
+    console.error("Consultation booked but email not sent:", reason);
+    return { success: false, error: reason };
   }
 
   try {
@@ -37,10 +38,18 @@ Wiadomość: ${params.message || "(brak)"}`,
       }),
     });
 
-    return response.ok;
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      const reason = body?.message || `Resend zwrócił status ${response.status}`;
+      console.error("Resend API error:", reason);
+      return { success: false, error: reason };
+    }
+
+    return { success: true };
   } catch (error) {
-    console.error("Resend request failed:", error);
-    return false;
+    const reason = error instanceof Error ? error.message : String(error);
+    console.error("Resend request failed:", reason);
+    return { success: false, error: reason };
   }
 }
 
@@ -98,7 +107,10 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({ error: insertError.message }), { status: 500 });
   }
 
-  const emailSent = await sendOwnerNotification({ name, email, date, time, message });
+  const notification = await sendOwnerNotification({ name, email, date, time, message });
 
-  return new Response(JSON.stringify({ saved: true, emailSent }), { status: 200 });
+  return new Response(
+    JSON.stringify({ saved: true, emailSent: notification.success, emailError: notification.error }),
+    { status: 200 },
+  );
 }
