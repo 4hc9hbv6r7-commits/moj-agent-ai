@@ -37,6 +37,7 @@ export default function RootLayout({
             <Link href="/report">📊 Raporty</Link>
             <Link href="/competitor">🏢 Konkurencja</Link>
             <Link href="/consultation">📅 Konsultacja</Link>
+            <Link href="/briefing">☀️ Briefing</Link>
             <NavAuthControls />
           </nav>
           {children}
