@@ -16,6 +16,7 @@ drop table if exists user_profiles cascade;
 drop table if exists reports cascade;
 drop table if exists consultations cascade;
 drop table if exists briefings cascade;
+drop table if exists webhook_events cascade;
 
 -- 1. Tabele
 
@@ -79,6 +80,15 @@ create table briefings (
   user_id uuid references auth.users(id) on delete cascade
 );
 
+-- Wywoływana przez zewnętrzny webhook (bez sesji użytkownika).
+create table webhook_events (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz default now(),
+  type text not null,
+  data jsonb not null,
+  analysis text not null
+);
+
 -- 2. Row Level Security — każdy user widzi/edytuje TYLKO swoje wiersze
 
 alter table conversations enable row level security;
@@ -88,6 +98,7 @@ alter table user_profiles enable row level security;
 alter table reports enable row level security;
 alter table consultations enable row level security;
 alter table briefings enable row level security;
+alter table webhook_events enable row level security;
 
 create policy "conversations_owner" on conversations
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -123,6 +134,13 @@ create policy "briefings_insert_public" on briefings
   for insert with check (true);
 
 create policy "briefings_select_public" on briefings
+  for select using (true);
+
+-- Endpoint webhooka (/api/webhook) nie ma sesji użytkownika — te same zasady co briefings.
+create policy "webhook_events_insert_public" on webhook_events
+  for insert with check (true);
+
+create policy "webhook_events_select_public" on webhook_events
   for select using (true);
 
 -- 3. match_documents (RAG) — wyszukiwanie semantyczne tylko we własnych dokumentach
