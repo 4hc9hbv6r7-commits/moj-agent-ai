@@ -15,6 +15,7 @@ drop table if exists documents cascade;
 drop table if exists user_profiles cascade;
 drop table if exists reports cascade;
 drop table if exists consultations cascade;
+drop table if exists briefings cascade;
 
 -- 1. Tabele
 
@@ -69,6 +70,15 @@ create table consultations (
   message text
 );
 
+-- Wywoływana przez cron (bez sesji użytkownika), więc user_id jest opcjonalny.
+create table briefings (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz default now(),
+  content text not null,
+  date date not null,
+  user_id uuid references auth.users(id) on delete cascade
+);
+
 -- 2. Row Level Security — każdy user widzi/edytuje TYLKO swoje wiersze
 
 alter table conversations enable row level security;
@@ -77,6 +87,7 @@ alter table documents enable row level security;
 alter table user_profiles enable row level security;
 alter table reports enable row level security;
 alter table consultations enable row level security;
+alter table briefings enable row level security;
 
 create policy "conversations_owner" on conversations
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -105,6 +116,14 @@ create policy "consultations_read_all" on consultations
 
 create policy "consultations_insert_own" on consultations
   for insert with check (auth.uid() = user_id);
+
+-- Endpoint cron (/api/cron/morning) nie ma sesji użytkownika — wstawia
+-- przez anon key, więc zapis/odczyt musi być otwarty (dane nieprywatne: pogoda/kursy).
+create policy "briefings_insert_public" on briefings
+  for insert with check (true);
+
+create policy "briefings_select_public" on briefings
+  for select using (true);
 
 -- 3. match_documents (RAG) — wyszukiwanie semantyczne tylko we własnych dokumentach
 
