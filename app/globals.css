@@ -1206,4 +1206,34 @@ input {
   font-weight: 700;
 }
 
+/* L8 W3 - Competitor Analysis */
+.competitor-composer {
+  grid-template-columns: 1fr;
+}
+
+.competitor-inputs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.competitor-inputs input {
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid #333;
+  background: #121212;
+  color: #ededed;
+  padding: 0 12px;
+}
+
+.competitor-context {
+  min-height: 70px;
+}
+
+@media (max-width: 700px) {
+  .competitor-inputs {
+    grid-template-columns: 1fr;
+  }
+}
+
 
