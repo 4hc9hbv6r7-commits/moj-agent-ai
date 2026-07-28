@@ -26,6 +26,11 @@ Napisz krótkie, przyjazne podsumowanie potwierdzające zamówienie (produkt, kl
 };
 
 export async function POST(req: Request) {
+  const authHeader = req.headers.get("authorization");
+  if (authHeader !== `Bearer ${process.env.WEBHOOK_SECRET}`) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+  }
+
   try {
     const body = await req.json();
     const { type, data } = body ?? {};
